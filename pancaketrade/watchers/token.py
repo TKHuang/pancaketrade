@@ -9,7 +9,6 @@ from pancaketrade.network import Network
 from pancaketrade.persistence import Token
 from pancaketrade.utils.config import Config
 from pancaketrade.watchers.order import OrderWatcher
-from telegram.ext import Dispatcher
 from web3 import Web3
 
 
@@ -18,12 +17,10 @@ class TokenWatcher:
         self,
         token_record: Token,
         net: Network,
-        dispatcher: Dispatcher,
         config: Config,
         orders: List = list(),
     ):
         self.net = net
-        self.dispatcher = dispatcher
         self.config = config
         self.token_record = token_record
         self.address = Web3.toChecksumAddress(token_record.address)
@@ -38,9 +35,7 @@ class TokenWatcher:
         self.orders: List[OrderWatcher] = [
             OrderWatcher(
                 order_record=order_record,
-                net=self.net,
-                dispatcher=self.dispatcher,
-                chat_id=self.config.secrets.admin_chat_id,
+                net=self.net
             )
             for order_record in orders
         ]
@@ -72,21 +67,12 @@ class TokenWatcher:
             if not self.net.is_approved(token_address=self.address) and order.type == 'sell':
                 # when selling we require that the token is approved on pcs beforehand
                 logger.info(f'Need to approve {self.symbol} for trading on PancakeSwap.')
-                self.dispatcher.bot.send_message(
-                    chat_id=self.config.secrets.admin_chat_id,
-                    text=f'Approving {self.symbol} for trading on PancakeSwap...',
-                )
+                print(f'Approving {self.symbol} for trading on PancakeSwap...')
                 res = self.net.approve(token_address=self.address)
                 if res:
-                    self.dispatcher.bot.send_message(
-                        chat_id=self.config.secrets.admin_chat_id,
-                        text='✅ Approval successful!',
-                    )
+                    print('✅ Approval successful!')
                 else:
-                    self.dispatcher.bot.send_message(
-                        chat_id=self.config.secrets.admin_chat_id,
-                        text='⛔ Approval failed',
-                    )
+                    print('⛔ Approval failed')
             order.price_update(price=price)
         self.orders = [o for i, o in enumerate(self.orders) if i not in indices_to_remove]
 

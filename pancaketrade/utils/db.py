@@ -16,17 +16,26 @@ def init_db() -> None:
         db.create_tables([Token, Order])
     columns = db.get_columns('token')
     column_names = [c.name for c in columns]
-    default_slippage_column = [c for c in columns if c.name == 'default_slippage'][0]
+    default_slippage_column = [
+        c for c in columns if c.name == 'default_slippage'
+    ][0]
     order_columns = db.get_columns('order')
-    order_slippage_column = [c for c in order_columns if c.name == 'slippage'][0]
+    order_slippage_column = [c for c in order_columns
+                             if c.name == 'slippage'][0]
     migrator = SqliteMigrator(db)
     with db.atomic():
         if 'effective_buy_price' not in column_names:
-            migrate(migrator.add_column('token', 'effective_buy_price', Token.effective_buy_price))
+            migrate(
+                migrator.add_column('token', 'effective_buy_price',
+                                    Token.effective_buy_price))
         if default_slippage_column.data_type == 'INTEGER':
-            migrate(migrator.alter_column_type('token', 'default_slippage', FixedCharField(max_length=7)))
+            migrate(
+                migrator.alter_column_type('token', 'default_slippage',
+                                           FixedCharField(max_length=7)))
         if order_slippage_column.data_type == 'INTEGER':
-            migrate(migrator.alter_column_type('order', 'slippage', FixedCharField(max_length=7)))
+            migrate(
+                migrator.alter_column_type('order', 'slippage',
+                                           FixedCharField(max_length=7)))
 
 
 def token_exists(address: ChecksumAddress) -> bool:
@@ -35,14 +44,14 @@ def token_exists(address: ChecksumAddress) -> bool:
     return count > 0
 
 
-def get_token_watchers(net, dispatcher: Dispatcher, config: Config) -> Dict[str, TokenWatcher]:
+def get_token_watchers(net, config: Config) -> Dict[str, TokenWatcher]:
     out: Dict[str, TokenWatcher] = {}
     with db:
-        for token_record in Token.select().order_by(fn.Lower(Token.symbol)).prefetch(Order):
+        for token_record in Token.select().order_by(fn.Lower(
+                Token.symbol)).prefetch(Order):
             out[token_record.address] = TokenWatcher(
                 token_record=token_record,
                 net=net,
-                dispatcher=dispatcher,
                 config=config,
                 orders=token_record.orders,
             )

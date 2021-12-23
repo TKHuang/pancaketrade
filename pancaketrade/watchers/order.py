@@ -6,17 +6,14 @@ from loguru import logger
 from pancaketrade.network import Network
 from pancaketrade.persistence import Order, Token, db
 from pancaketrade.utils.generic import format_token_amount, start_in_thread
-from telegram.ext import Dispatcher
 from web3.types import Wei
 
 
 class OrderWatcher:
-    def __init__(self, order_record: Order, net: Network, dispatcher: Dispatcher, chat_id: int):
+    def __init__(self, order_record: Order, net: Network):
         self.order_record = order_record
         self.token_record: Token = order_record.token
         self.net = net
-        self.dispatcher = dispatcher
-        self.chat_id = chat_id
 
         self.type = order_record.type  # buy (tokens for BNB) or sell (tokens for BNB)
         self.limit_price: Optional[Decimal] = (
@@ -98,9 +95,7 @@ class OrderWatcher:
         elif self.trailing_stop and not self.above and (price <= limit_price or self.min_price is not None):
             if self.min_price is None:
                 logger.info(f'Limit condition reached at price {price:.3e} BNB')
-                self.dispatcher.bot.send_message(
-                    chat_id=self.chat_id, text=f'🔹 Order #{self.order_record.id} activated trailing stop loss.'
-                )
+                print(f'🔹 Order #{self.order_record.id} activated trailing stop loss.')
                 self.min_price = price
             rise = ((price / self.min_price) - Decimal(1)) * Decimal(100)
             if price < self.min_price:
@@ -129,9 +124,7 @@ class OrderWatcher:
         elif self.trailing_stop and self.above and (price >= limit_price or self.max_price is not None):
             if self.max_price is None:
                 logger.info(f'Limit condition reached at price {price:.3e} BNB')
-                self.dispatcher.bot.send_message(
-                    chat_id=self.chat_id, text=f'🔹 Order #{self.order_record.id} activated trailing stop loss.'
-                )
+                print(f'🔹 Order #{self.order_record.id} activated trailing stop loss.')
                 self.max_price = price
             drop = (Decimal(1) - (price / self.max_price)) * Decimal(100)
             if price > self.max_price:
@@ -148,18 +141,12 @@ class OrderWatcher:
         if self.type == 'buy':
             logger.info('Buying tokens')
             amount = Decimal(self.amount) / Decimal(10 ** 18)
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'🔸 Trying to buy for {format_token_amount(amount)} BNB of {self.token_record.symbol}...',
-            )
+            print(f'🔸 Trying to buy for {format_token_amount(amount)} BNB of {self.token_record.symbol}...')
             start_in_thread(self.buy)
         else:  # sell
             logger.info('Selling tokens')
             amount = Decimal(self.amount) / Decimal(10 ** self.token_record.decimals)
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'🔸 Trying to sell {format_token_amount(amount)} {self.token_record.symbol}...',
-            )
+            print(f'🔸 Trying to sell {format_token_amount(amount)} {self.token_record.symbol}...')
             start_in_thread(self.sell)
 
     def buy(self):
@@ -174,10 +161,7 @@ class OrderWatcher:
             else:
                 reason_or_link = txhash_or_error
             logger.error(f'Transaction failed: {reason_or_link}')
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'⛔️ <u>Transaction failed:</u> {txhash_or_error}\n' + 'Order below deleted:\n' + self.long_str(),
-            )
+            print(f'⛔️ <u>Transaction failed:</u> {txhash_or_error}\n' + 'Order below deleted:\n' + self.long_str())
             self.remove_order()
             self.finished = True  # will trigger deletion of the object
             return
@@ -195,43 +179,28 @@ class OrderWatcher:
                 self.token_record.save()
         except Exception as e:
             logger.error(f'Effective buy price update failed: {e}')
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'⛔️ Effective buy price update failed: {e}',
-            )
+            print(f'⛔️ Effective buy price update failed: {e}')
         finally:
             db.close()
         logger.success(
             f'Buy transaction succeeded. Received {format_token_amount(tokens_out)} {self.token_record.symbol}. '
             + f'Effective price (after tax) {effective_price:.4g} BNB/token'
         )
-        self.dispatcher.bot.send_message(
-            chat_id=self.chat_id, text='<u>Closing the following order:</u>\n' + self.long_str()
-        )
-        self.dispatcher.bot.send_message(
-            chat_id=self.chat_id,
-            text=f'✅ Got {format_token_amount(tokens_out)} {self.token_record.symbol} at '
+        print('<u>Closing the following order:</u>\n' + self.long_str())
+        print(
+            f'✅ Got {format_token_amount(tokens_out)} {self.token_record.symbol} at '
             + f'tx <a href="https://bscscan.com/tx/{txhash_or_error}">{txhash_or_error[:8]}...</a>\n'
-            + f'Effective price (after tax) {effective_price:.4g} BNB/token',
+            + f'Effective price (after tax) {effective_price:.4g} BNB/token'
         )
         if not self.net.is_approved(token_address=self.token_record.address):
             # pre-approve for later sell
             logger.info(f'Approving {self.token_record.symbol} for trading on PancakeSwap.')
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'Approving {self.token_record.symbol} for trading on PancakeSwap...',
-            )
+            print(f'Approving {self.token_record.symbol} for trading on PancakeSwap...')
             res = self.net.approve(token_address=self.token_record.address)
             if res:
-                self.dispatcher.bot.send_message(
-                    chat_id=self.chat_id,
-                    text='✅ Approval successful!',
-                )
+                print('✅ Approval successful!')
             else:
-                self.dispatcher.bot.send_message(
-                    chat_id=self.chat_id,
-                    text='⛔ Approval failed',
-                )
+                print('⛔ Approval failed')
         self.remove_order()
         self.finished = True  # will trigger deletion of the object
 
@@ -249,10 +218,8 @@ class OrderWatcher:
                 reason_or_link = f'<a href="https://bscscan.com/tx/{txhash_or_error}">{txhash_or_error[:8]}...</a>'
             else:
                 reason_or_link = txhash_or_error
-            self.dispatcher.bot.send_message(
-                chat_id=self.chat_id,
-                text=f'⛔️ <u>Transaction failed:</u> {reason_or_link}\n' + 'Order below deleted.\n' + self.long_str(),
-            )
+                print(f'⛔️ <u>Transaction failed:</u> {reason_or_link}\n'
+                      'Order below deleted.\n' + self.long_str())
             self.remove_order()
             self.finished = True  # will trigger deletion of the object
             return
@@ -262,16 +229,13 @@ class OrderWatcher:
             f'Sell transaction succeeded. Received {bnb_out:.3g} BNB. '
             + f'Effective price (after tax) {effective_price:.4g} BNB/token'
         )
-        self.dispatcher.bot.send_message(
-            chat_id=self.chat_id, text='<u>Closing the following order:</u>\n' + self.long_str()
-        )
+        print('<u>Closing the following order:</u>\n' + self.long_str())
         usd_out = self.net.get_bnb_price() * bnb_out
-        self.dispatcher.bot.send_message(
-            chat_id=self.chat_id,
-            text=f'✅ Got {bnb_out:.3g} BNB (${usd_out:.2f}) at '
+        print(
+            f'✅ Got {bnb_out:.3g} BNB (${usd_out:.2f}) at '
             + f'tx <a href="https://bscscan.com/tx/{txhash_or_error}">{txhash_or_error[:8]}...</a>\n'
             + f'Effective price (after tax) {effective_price:.4g} BNB/token.\n'
-            + f'This order sold {sold_proportion:.1%} of the token\'s balance.',
+            + f'This order sold {sold_proportion:.1%} of the token\'s balance.'
         )
         self.remove_order()
         self.finished = True  # will trigger deletion of the object

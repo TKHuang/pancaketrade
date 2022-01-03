@@ -1,5 +1,3 @@
-import PySimpleGUI as sg
-
 from typing import NamedTuple, Dict
 from decimal import Decimal
 

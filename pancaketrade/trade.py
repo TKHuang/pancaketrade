@@ -2,9 +2,9 @@ import logging
 import sys
 
 import click
+import zerorpc
 from loguru import logger
 
-from pancaketrade.bot import TradeBot
 from pancaketrade.utils.config import read_config
 from pancaketrade.utils.generic import InterceptHandler
 from pancaketrade.gui import Gui
@@ -25,16 +25,13 @@ logging.basicConfig(handlers=[InterceptHandler()], level=0)
 
 @click.command()
 @click.argument('config_file', required=False, default='user_data/config.yml')
-@click.option('--gui', required=False, default=False)
-def main(config_file: str, gui: bool) -> None:
+def main(config_file: str) -> None:
     try:
+        print('sssssss')
         config = read_config(config_file)
-        if (gui):
-            window = Gui(config=config)
-            window.start()
-        else:
-            bot = TradeBot(config=config)
-            bot.start()
+        s = zerorpc.Server(Gui(config=config))
+        s.bind('tcp://0.0.0.0:4242')
+        s.run()
     finally:
         logger.info('Bye!')
 

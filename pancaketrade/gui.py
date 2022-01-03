@@ -1,6 +1,5 @@
 """Gui class."""
 import time
-import PySimpleGUI as sg
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -27,6 +26,7 @@ class Events:
 
 
 class Gui:
+
     def __init__(self, config: Config):
         self.config = config
         self.db = db
@@ -40,7 +40,6 @@ class Gui:
         self.watchers: Dict[str, TokenWatcher] = get_token_watchers(
             net=self.net, config=self.config)
         self.events = Events()
-        self._init_window()
         self.actions = self._get_actions()
 
     def _get_actions(self):
@@ -49,47 +48,18 @@ class Gui:
         }
         return actions
 
-    def _get_layout(self):
-        layout = [[
-            sg.Input('address',
-                     size=(40, 10),
-                     key=f'{self.events.ADD_TOKEN}:address'),
-            sg.Input('slippage',
-                     size=(20, 10),
-                     key=f'{self.events.ADD_TOKEN}:slippage'),
-            sg.Input('icon',
-                     size=(20, 10),
-                     key=f'{self.events.ADD_TOKEN}:icon')
-        ], [sg.Button(self.events.ADD_TOKEN)], [sg.Output(size=(40, 10))]]
-        return layout
-
-    def _init_window(self):
-        layout = self._get_layout()
-        self.window = sg.Window('Scientist!', layout)
-
-    def start(self):
-        logger.info('Gui started')
-        while True:
-            event, values = self.window.read()
-
-            if event == sg.WINDOW_CLOSED or event == 'Quit':
-                break
-
-            self.event_handler(event, values)
-            # See if user wants to quit or window was closed
-
-        # event, values = self.window.read()
-        # print(values)
-
-        self.window.close()
-
-    def event_handler(self, event, values):
+    def event_handler(self, event, *args, **kwargs):
         if event == self.events.ADD_TOKEN:
-            address = values[f'{self.events.ADD_TOKEN}:address']
-            slippage = values[f'{self.events.ADD_TOKEN}:slippage']
-            icon = values[f'{self.events.ADD_TOKEN}:icon']
+            address = args[0]
+            slippage = args[1]
+            try:
+                icon = args[2]
+            except IndexError:
+                icon = ''
+
             try:
                 self.actions[self.events.ADD_TOKEN].handler(
                     address, slippage, icon)
             except Exception as e:
                 print(f'Add token {address} failed:\n {e}')
+                return str(e)

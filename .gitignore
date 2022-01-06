@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 .vscode/
+node_modules
 
 user_data/config.yml
 user_data/pancaketrade.db

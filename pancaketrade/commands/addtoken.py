@@ -1,5 +1,3 @@
-import PySimpleGUI as sg
-
 from typing import NamedTuple, Dict
 from decimal import Decimal
 
@@ -11,6 +9,7 @@ from pancaketrade.utils.generic import format_token_amount
 from pancaketrade.watchers import TokenWatcher
 from web3 import Web3
 from web3.exceptions import ABIFunctionNotFound, ContractLogicError
+from nubia import context
 
 
 class AddTokenResponses(NamedTuple):
@@ -20,6 +19,7 @@ class AddTokenResponses(NamedTuple):
 
 
 class AddToken:
+
     def __init__(self, parent, config: Config):
         self.parent = parent
         self.net: Network = parent.net

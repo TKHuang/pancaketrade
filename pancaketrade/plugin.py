@@ -9,8 +9,9 @@
 
 import argparse
 
-from pancaketrade.commands.context import NubiaExampleContext
-from pancaketrade.commands.statusbar import NubiaExampleStatusBar
+from context import NubiaExampleContext
+from statusbar import NubiaExampleStatusBar
+from pancaketrade.utils.config import read_config, Config
 
 from nubia import CompletionDataSource, PluginInterface
 from nubia.internal.blackcmd import CommandBlacklist
@@ -22,6 +23,9 @@ class NubiaExamplePlugin(PluginInterface):
     use case. It allowes custom argument validation, control over command
     loading, custom context objects, and much more.
     """
+
+    def __init__(self, config: Config):
+        self.config = config
 
     def create_context(self):
         """
@@ -47,13 +51,15 @@ class NubiaExamplePlugin(PluginInterface):
         build your list of arguments that you want for your shell.
         """
         opts_parser = argparse.ArgumentParser(
-            description="Nubia Example Utility",
+            description="Be a scientist!",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             add_help=add_help,
         )
-        opts_parser.add_argument(
-            "--config", "-c", default="", type=str, help="Configuration File"
-        )
+        opts_parser.add_argument("--config",
+                                 "-c",
+                                 default=self.config,
+                                 type=str,
+                                 help="Configuration File")
         opts_parser.add_argument(
             "--verbose",
             "-v",

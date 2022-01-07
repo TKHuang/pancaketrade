@@ -21,7 +21,7 @@ yamale = "^3.0.6"
 questionary = "^1.9.0"
 peewee = "^3.14.4"
 apscheduler = "<4.0.0"
-python-nubia = "^0.2b5"
+python-nubia = { file = "python_nubia-0.3.0-py3-none-any.whl"}
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.1"

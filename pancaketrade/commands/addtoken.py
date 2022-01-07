@@ -1,5 +1,9 @@
+import asyncio
+
 from typing import NamedTuple, Dict
 from decimal import Decimal
+
+import questionary
 
 from pancaketrade.network import Network
 from pancaketrade.persistence import Token, db
@@ -25,10 +29,10 @@ class AddToken:
         self.net: Network = parent.net
         self.config = config
 
-    def handler(self, address: str, slippage: str, icon: str):
+    async def handler(self, address: str, slippage: str, icon: str):
         add = self.addtoken_address(address)
         add = self.addtoken_icon(add, icon)
-        self.addtoken_slippage(add, slippage)
+        await self.addtoken_slippage(add, slippage)
 
     def addtoken_icon(self, add: Dict[str, str], icon: str):
         add['icon'] = icon.strip()
@@ -57,7 +61,7 @@ class AddToken:
 
         return add
 
-    def addtoken_slippage(self, add: Dict[str, str], slippage: str):
+    async def addtoken_slippage(self, add: Dict[str, str], slippage: str):
         try:
             slippage = Decimal(slippage.strip())
         except Exception:
@@ -90,8 +94,17 @@ class AddToken:
         balance_usd = self.net.get_token_balance_usd(
             token_address=token.address, balance=balance)
         if not self.net.is_approved(token_address=token.address):
-            yes = sg.popup_yes_no('Approve pancakeswap for selling')
-            if yes:
+            question = questionary.select(
+                'Approve pancakeswap to transfer your token?',
+                choices=['Y', 'N'],
+                default='Y')
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                yes = question.ask()
+            else:
+                yes = await loop.run_in_executor(None, question.ask)
+            if yes == 'Y':
                 approved = token.approve()
                 if approved:
                     print(f'{token.name} Approval successful on PancakeSwap!')

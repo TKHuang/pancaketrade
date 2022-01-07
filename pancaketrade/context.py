@@ -8,6 +8,7 @@
 #
 
 from nubia import context, eventbus, exceptions
+from pancaketrade.commands.scientist import Scientist
 
 
 class NubiaExampleContext(context.Context):
@@ -21,6 +22,7 @@ class NubiaExampleContext(context.Context):
 
     async def on_interactive(self, args):
         self.verbose = args.verbose
+        self.st = Scientist(config=args.config)
         ret = await self._registry.find_command("connect").run_cli(args)
         if ret:
             raise exceptions.CommandError("Failed starting interactive mode")
